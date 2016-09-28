@@ -2,10 +2,41 @@
 <html>
 <head>
 	<title>Search AI</title>
+	{% block stylesheets %}
+        <link href="{{ asset('bundles/framework/css/body.css') }}" type="text/css" rel="stylesheet" />
+    {% endblock %}
 </head>
 <body>
 	<h1>Showing results...</h1>
-	{{ books }}
+	<h2>Good Reads API</h2>
+	{% for goodBook in books2[0].work %}	
+	
+		<div class="col-md-4">
+			<img src="{{ goodBook.best_book.small_image_url }}" />
+		</div>
+		<div style="col-md-8">
+		<h3>{{ goodBook.best_book.title}} -  {{ goodBook.best_book.author.name}} </h3>
+		<p></p>
+		</div>
+		<div class="clear"></div>
+			
+	{% endfor %}
+	<div class="clear"></div>
+	
+	<h2>Google Books API</h2>
+	{% for book in books %}	
+		{% for volume in book.items %}
+			<div class="col-md-4">
+				<img src="{{ volume.volumeInfo.imageLinks.thumbnail }}" />
+			</div>
+			<div style="col-md-8">
+			<h3>{{ volume.volumeInfo.title}} -  {{ volume.volumeInfo.authors[0]}} </h3>
+			<p>{{volume.volumeInfo.description}}</p>
+			</div>
+			<div class="clear"></div>
+			
+		{% endfor %}	
+	{% endfor %}
 </body>
 
 </html>

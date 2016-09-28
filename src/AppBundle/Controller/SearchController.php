@@ -4,50 +4,55 @@ namespace AppBundle\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Finder\Finder;
+use AppBundle\Import;
+use AppBundle\GoogleBooksAPI;
+use AppBundle\GoodReadsAPI;
 
 
 
 class SearchController extends Controller
 {
-	/*
-	* request to google books using curl
-	* @param title
-	* @param author
-	* returns response
-	*/
-	public function requestAction($title, $author){
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, 'https://www.googleapis.com/books/v1/volumes?q='.$title.'+inauthor:'.$author.'&key=AIzaSyDbn5MQIDr-wZV-N6WiYogQ837EkOPLYIo');
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/json')); // Assuming you're requesting JSON
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		$response = curl_exec($ch);
-		$data = json_decode($response);
-		return $data;
-	}
 	
     /**
      * @Route("/search" )
      */
     public function searchAction()
     {
-		$books = array();
-		//declaring the Finder Component and selecting the files in folder books 
-		$finder = new Finder();
-		$finder->files()->in("C:/xampp/htdocs/SearchAI/books");
+		//import files
+		$import = new Import();
+		$files = $import->importFolder("C:/xampp/htdocs/SearchAI/books");
 		
-		foreach ($finder as $file) {			
-			// Dump the relative path to the file
-			$temp = explode(" - ", $file->getRelativePathname());
-			$temp[1] = explode(".", $temp[1]);				    //remove file extension
-			array_push($books, $this->requestAction(str_replace(" ","+",$temp[1][0]), str_replace(" ","+",$temp[0])));  //remove spaces, make request to google books and add to array
-			unset($temp);
-		}
+		//call GoogleBooksAPI
+		$books = array();$books2 = array();
+		$googleBooksAPI = new GoogleBooksAPI();
+		$goodReadsAPI = new GoodReadsAPI();
 		
+		foreach ($files as $file) {	
+			$fileName = $this->regex($file);			
+			array_push($books, $googleBooksAPI->requestAction($fileName['title'], $fileName['author'])); 			
+			array_push($books2, $goodReadsAPI->requestAction($fileName['title'], $fileName['author'])); 
+			
+		}	
+		print_r($books2);		
         return $this->render('search/search-results.html.twig', array(
-            'books' => $books
+            'books' => $books,
+            'books2' => $books2
+			
         ));
     }
+	
+	public function regex($file){
+		if($file){
+			$fileName = array('title' => '', 'author'=> '');
+			$temp = explode(" - ", $file->getRelativePathname());  //get relative path  Author - Title.extension
+			$temp[1] = explode(".", $temp[1]);				       //remove file extension
+			
+			$fileName['title'] = str_replace(" ","+",$temp[1][0]);
+			$fileName['author'] = str_replace(" ","+",$temp[0]);
+
+			return $fileName;			
+		}
+	}
 	
 	
 }
