@@ -16,7 +16,12 @@ class Book
      * @ORM\GeneratedValue(strategy="AUTO")
      */
     private $id;
-
+	
+	/**
+     * @ORM\Column(type="integer")
+     */
+    private $iban;
+	
     /**
      * @ORM\Column(type="string", length=100)
      */
@@ -26,14 +31,15 @@ class Book
      * @ORM\Column(type="string", length=100)
      */
     private $author;
-
+	
     /**
      * @ORM\Column(type="decimal", scale=2)
      */
     private $price;
-
+	
     /**
      * @ORM\Column(type="text")
      */
     private $description;
+	
 }
