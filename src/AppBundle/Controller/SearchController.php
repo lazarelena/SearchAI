@@ -21,7 +21,7 @@ class SearchController extends Controller
 		//import files
 		$goodreads = $this->get('app.goodreads');
 		$googlebooks = $this->get('app.googlebooks');
-		$import = new Import($goodreads, $googlebooks);
+		$import = $this->get('app.import');
 		$import->importFolder("C:/xampp/htdocs/SearchAI/books");
 				
         return new Response();

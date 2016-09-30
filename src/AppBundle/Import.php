@@ -5,60 +5,82 @@ use Symfony\Component\Finder\Finder;
 use AppBundle\Entity\Book;
 use AppBundle\GoodReadsAPI;
 use AppBundle\GoogleBooksAPI;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\EntityManager;
 
 class Import
 {
 	protected $goodreads;
-
-    public function __construct(GoodReadsAPI $goodreads, GoogleBooksAPI $googlebooks)
+	protected $googleboks;
+	protected $em;
+	
+    public function __construct(GoodReadsAPI $goodreads, GoogleBooksAPI $googlebooks, EntityManager $em)
     {
         $this->goodreads = $goodreads;
         $this->googlebooks = $googlebooks;
+		$this->em = $em;
     }
 	
     public function importFolder($path)
     {
-		$books = array();		
 		$finder = new Finder();
 		if($path && $path != ""){
-			$finder->files()->in($path);  //search through folder			
-			
-			//call GoogleBooksAPI
-			$books = array();$books2 = array();
-			$googleBooksAPI = $this->googlebooks;
-			$goodReadsAPI = $this->goodreads;
+			$finder->files()->in($path);  //search through folder
 			
 			foreach ($finder as $file) {	
-				$fileName = $this->regex($file);			
-				array_push($books, $googleBooksAPI->search($fileName['title'], $fileName['author'])); 			
-				array_push($books2, $goodReadsAPI->search($fileName['title'], $fileName['author'])); 				
-			}	
-			print_r($books);
-		}		
+				$fileName = $this->regex($file);
+				$this->save($fileName['title'],$fileName['author'],0,0,'');							
+			}
+		}
+		$this->updateInfoGoogleBooksAPI();		
     }
-	
-	public function saveAction()  //save to db
+	public function updateInfoGoogleBooksAPI()
 	{
-		$book = new Book();
-		$book->setTitle('Hallo');
-		$book->setAuthor('J.K. Rowling');
-		$book->setPrice(19.99);
-		$book->setDescription('Ergonomic and stylish!');
-
-		$em = $this->getDoctrine()->getManager();
-		$em->persist($book);
-		$em->flush();
-		
-		return new Response('Saved new book with id '.$book->getId());
+		$books = $this->em->getRepository('AppBundle:Book')->findAll();
+		$parsedBooks = $this->googlebooks->parseData($books);
+		foreach($parsedBooks as $book)
+			$this->save($book[0], $book[1],0,$book[2],$book[3]);
 	}
+	
+	public function save($title, $author, $price, $iban, $description)  //save to db
+	{
+		$book = $this->em->getRepository('AppBundle:Book')->findOneBy([
+			'title' => $title, 
+			'author' => $author
+		]);
+
+		if ($book == null){ //no brand found. So, persist the new one:		
+			$book = new Book();
+			$book->setTitle($title);
+			$book->setAuthor($author);
+			$book->setPrice($price);
+			$book->setIban($iban);
+			$book->setDescription($description);
+			
+			print_r('New book:'.$title);
+			
+		
+		} else {
+			$book->getPrice() == 0 || $book->getPrice() > $price  ? $book->setPrice($price) :'';
+			$book->getIban() == 0 ? $book->setIban($iban)  :'';
+			$book->getDescription() == '' ? $book->setDescription($description) :'';
+			print_r('Update book:'.$title);
+		}
+		$this->em->persist($book);
+		$this->em->flush();
+		
+		return true;
+	}
+	
 	public function regex($file){
 		if($file){
 			$fileName = array('title' => '', 'author'=> '');
 			$temp = explode(" - ", $file->getRelativePathname());  //get relative path  Author - Title.extension
 			$temp[1] = explode(".", $temp[1]);				       //remove file extension
 			
-			$fileName['title'] = str_replace(" ","+",$temp[1][0]);
-			$fileName['author'] = str_replace(" ","+",$temp[0]);
+			
+			$fileName['title'] = $temp[1][0];
+			$fileName['author'] = $temp[0];
 
 			return $fileName;			
 		}

@@ -10,4 +10,4 @@ services:
         class:        AppBundle\GoogleBooksAPI
     app.import:
         class:        AppBundle\Import
-        arguments: ['@app.goodreads', '@app.googlebooks']
+        arguments: ['@app.goodreads', '@app.googlebooks', '@doctrine.orm.entity_manager']
